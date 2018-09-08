@@ -34,6 +34,40 @@ splashf <- function(dtemp,dprec,dsun,lat,yr,elv,whc) {
 }
 # 
 ###############################################################################
+## aetpet: Function to calculate aet and pet
+splashfwbm <- function(dtemp,dprec,dsun,lat,yr,elv,whc) {
+  dyn.load('src/splashwbmplus.so')
+  retdata = .Fortran('spin_up_sm',
+                     yr = as.integer(yr),
+                     lat = as.double(lat),
+                     elv = as.double(elv),
+                     whc = as.double(whc),
+                     pr = as.double(dprec),
+                     tc = as.double(dtemp),
+                     sf = as.double(dsun),
+                     maet = double(12),
+                     mpet = double(12),
+                     mcn = double(12),
+                     mro = double(12),
+                     mlsr = double(12),
+                     msm = double(12),
+                     msnow = double(12),
+                     mdr = double(12),
+                     daet = double(365),
+                     dpet = double(365),
+                     dcn = double(365),
+                     dro = double(365),
+                     dlsr = double(365),
+                     dsm = double(365),
+                     dsnow = double(365),
+                     dmelt = double(365),
+                     ddr = double(365),
+                     sm = double(1))
+  
+  return(retdata)
+}
+
+###############################################################################
 # ## DAILY: Function to interpolate from monthly to daily
 # ## Replace with 'approx'?
 # 
