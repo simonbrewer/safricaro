@@ -124,7 +124,7 @@ for (i in 1:ncrds) {
 # stopCluster(cl)
 
 ## New rasters
-r = r3
+r = raster(clim_tmp,1)
 gdd5.r = setValues(r, out.df$gdd5)
 alpha.r = setValues(r, out.df$alpha)  
 #par.r = setValues(r, out.df$par)
