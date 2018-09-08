@@ -36,20 +36,34 @@ c  !----------------------------------------------------------------
 c  !----------------------------------------------------------------
 c  ! Version modified to run from R by Simon Brewer 160614
 c  !
+c  ! Ver 0.6
+c  ! 
+c  ! Added snowmelt back into soil moisture store
 c  ! Note that the Julian days have been replaced by a standard 365 
 c  ! day year
 c  !      
 c  ! To Do
-c  ! Soil data - whc
-c  ! Elevation as non-constant
-c  ! Snow pack
+c  ! Soil data - whc. Done 20160623 (passed from R script)
+c  ! Irrigation amount (or other water input)      
+c  !----------------------------------------------------------------
+c  !----------------------------------------------------------------
+c  ! Ver 0.7
+c  ! 
+c  ! Corrected monthly soil moisture to average not sum
+c  !      
+c  ! To Do
+c  ! Calculate land source runoff (in addition to saturation excess)
+c  ! Given by Miller et al. (1994) Journal of Climate
+c  ! lsr = max( 0.5(pr + snow) * sm / whc, (pr + snow) + sm - whc )
+c  ! 
+c  ! 
 c  ! Irrigation amount (or other water input)      
 c  !----------------------------------------------------------------
 
 c******************************************************************************c
-        subroutine spin_up_sm( yr, lat, elv, pr, tc, sf,
-     >                            maet,mpet,mcn,mro,msm,
-     >                            daet,dpet,dcn,dro,dsm,sm)
+        subroutine spin_up_sm( yr,lat,elv,whc,pr,tc,sf,
+     >                         maet,mpet,mcn,mro,mlsr,msm,msnow,
+     >                         daet,dpet,dcn,dro,dlsr,dsm,dsnow,sm)
                 
         !----------------------------------------------------------------
         ! Spins up the daily soil moisture
@@ -68,28 +82,37 @@ c******************************************************************************c
         double precision end_sm    ! soil moisture in last day of year
         double precision diff_sm   ! difference in soil moisture between first and last day of year
         double precision ro    ! daily runoff (mm)
+        double precision lsr    ! daily land surface runoff (mm)
         double precision sm    ! soil moisture (=water content, mm)
+        double precision whc   ! soil water holdin capacity (mm) 
+        double precision snow  ! snowpack (mm) 
 
         ! output variables
         double precision daet(365)
         double precision dpet(365)
         double precision dcn(365)
         double precision dro(365)
+        double precision dlsr(365)
         double precision dsm(365)
+        double precision dsnow(365)
 
         double precision maet(12)
         double precision mpet(12)
         double precision mcn(12)
         double precision mro(12)
+        double precision mlsr(12)
         double precision msm(12)
+        double precision msnow(12)
 
          ! control variables
         spin_count = 1
         diff_sm = 9999.0
 
-        ! initialize soil moisture and runoff
+        ! initialize soil moisture snowpack and runoff
         sm = 0.0
+        snow = 0.0
         ro = 0.0
+        lsr = 0.0
 
         do 10 while (diff_sm.gt.1.0e-4)
 
@@ -98,9 +121,10 @@ c******************************************************************************c
         !print*,'spinup year', spin_count
         !print*,'--------------------------------------------'
         start_sm = sm
-        call run_one_year( lat, elv, yr, pr, tc, sf,
-     >                     maet,mpet,mcn,mro,msm,
-     >                     daet,dpet,dcn,dro,dsm,sm)
+        call run_one_year( lat,elv,yr,whc,pr,tc,sf,
+     >                     maet,mpet,mcn,mro,mlsr,msm,
+     >                     daet,dpet,dcn,dro,dlsr,dsm,sm,
+     >                     msnow,dsnow,snow)
 
         end_sm  = sm
 
@@ -122,9 +146,10 @@ c******************************************************************************c
 c******************************************************************************c
 
 c******************************************************************************c
-        subroutine run_one_year( lat, elv, yr, pr, tc, sf,
-     >                            maet,mpet,mcn,mro,msm,
-     >                            daet,dpet,dcn,dro,dsm,sm)
+        subroutine run_one_year( lat,elv,yr,whc,pr,tc,sf,
+     >                           maet,mpet,mcn,mro,mlsr,msm,
+     >                           daet,dpet,dcn,dro,dlsr,dsm,sm,
+     >                           msnow,dsnow,snow)
         implicit none
         !----------------------------------------------------------------
         ! Calculates daily and monthly quantities for one year
@@ -142,7 +167,10 @@ c******************************************************************************c
         double precision pet   ! daily potential evapotranspiration (mm)
         double precision cn    ! daily condensation (mm)
         double precision ro    ! daily runoff (mm)
+        double precision lsr   ! daily land surface runoff (mm)
         double precision sm    ! soil moisture (=water content, mm)
+        double precision whc   ! soil water holding capacity (mm) 
+        double precision snow  ! snowpack (mm) 
 
         ! local variables
         double precision use_tc ! mean monthly or daily temperature (deg C)
@@ -165,13 +193,17 @@ c******************************************************************************c
         double precision dpet(365)
         double precision dcn(365)
         double precision dro(365)
+        double precision dlsr(365)
         double precision dsm(365)
+        double precision dsnow(365)
 
         double precision maet(12)
         double precision mpet(12)
         double precision mcn(12)
         double precision mro(12)
+        double precision mlsr(12)
         double precision msm(12)
+        double precision msnow(12)
 
         ! Parameters
         parameter(nmonth = 12)           ! number of months in year
@@ -189,8 +221,9 @@ c******************************************************************************c
         mpet(moy) = 0
         mcn(moy) = 0
         mro(moy) = 0
+        mlsr(moy) = 0
         msm(moy) = 0
-
+        msnow(moy) = 0
 
         ! Calculate number of days in month
         ! Replaced with simple 365 day cycle using month lengths
@@ -214,8 +247,8 @@ c******************************************************************************c
         use_sf   = sf(doy)
         use_pr   = pr(doy)
 
-        call run_one_day( lat, elv, doy, yr, use_pr, use_tc, use_sf,
-     >                    aet, pet, sm, cn, ro )
+        call run_one_day( lat,elv,doy,yr,whc,use_pr,use_tc,use_sf,
+     >                    aet,pet,sm,cn,ro,lsr,snow )
 
         !print*,'currentsm ',doy,sm
          ! Collect daily output variables
@@ -225,17 +258,23 @@ c******************************************************************************c
         dpet(doy) = pet
         dcn(doy) = cn
         dro(doy) = ro
+        dlsr(doy) = lsr
         dsm(doy) = sm
+        dsnow(doy) = snow
 
         ! Collect monthly output variables
         maet(moy) = maet(moy) + aet
         mpet(moy) = mpet(moy) + pet
         mcn(moy) = mcn(moy) + cn
         mro(moy) = mro(moy) + ro
+        mlsr(moy) = mlsr(moy) + lsr
         msm(moy) = msm(moy) + sm
+        msnow(moy) = msnow(moy) + snow
 
  20     continue
 
+        ! Mean soil moisture for month
+        msm(moy) = msm(moy) / ndaymonth(moy)
        
  10     continue
 
@@ -244,8 +283,8 @@ c******************************************************************************c
 c******************************************************************************c
 
 c******************************************************************************c
-        subroutine run_one_day( lat, elv, doy, yr, pr, tc, sf,
-     >                          aet, pet, sm, cn, ro)
+        subroutine run_one_day( lat,elv,doy,yr,whc,pr,tc,sf,
+     >                          aet,pet,sm,cn,ro,lsr,snow)
         implicit none
         !----------------------------------------------------------------
         ! Calculates daily and monthly quantities for one year
@@ -262,22 +301,47 @@ c******************************************************************************c
         double precision pet   ! daily potential evapotranspiration (mm)
         double precision cn    ! daily condensation (mm)
         double precision ro    ! daily runoff (mm)
+        double precision lsr   ! daily land surface runoff (mm)
         double precision sm    ! soil moisture (=water content, mm)
         double precision sw    ! evaporative supply rate (mm/h)
+        double precision whc   ! soil water holding capacity (mm) 
         double precision kCw, kWm
+        double precision tsnow ! snow melt temperature
+        double precision snow  ! daily snowpack (mm)
+        double precision maxsnow  ! max snowpack (mm)
+        double precision melt  ! daily melt (mm, from GUESS)
+
+        double precision lsr1   ! daily land surface runoff (mm)
+        double precision lsr2   ! daily land surface runoff (mm)
 
         ! Parameters
-        parameter(kCw = 1.05)           ! supply constant, mm/hr (Federer, 1982)
-        parameter(kWm = 150)            ! soil moisture capacity, mm (Cramer & Prentice, 1988)
-        
+        parameter(tsnow = -1.)  ! snowmelt temperature (deg C, GUESS)
+        parameter(maxsnow = 10000.)  ! max snowpack (mm, GUESS)
+        parameter(kCw = 1.05)  ! supply constant, mm/hr (Federer, 1982)
+        !parameter(kWm = 150)  ! soil moisture capacity, mm (Cramer & Prentice, 1988)
+        kWm = whc   ! Set kWm from soil WHC 
+        !print*,'whc ',whc
         ! Calculate evaporative supply rate, mm/h
         sw = kCw * sm / kWm
 
         ! Calculate radiation and evaporation quantities
         call evap( lat, doy, elv, yr, sf, tc, sw, cn, aet, pet )
 
+        ! Snow pack
+        if(tc.lt.tsnow) then
+                melt = -min(pr,maxsnow-snow)
+        else
+                melt =  (1.5+0.007*pr)*(tc-tsnow)
+                if(melt.gt.snow) then
+                        melt = snow
+                endif
+        endif
+        snow = snow - melt
+
+        !print*,doy,tc,pr,snow,melt
+
         ! Update soil moisture
-        sm = sm + pr + cn - aet
+        sm = sm + pr + cn + melt - aet
 
         if (sm>kWm) then
                 ! Bucket is full
@@ -289,7 +353,10 @@ c******************************************************************************c
         elseif (sm<0) then
                 ! Bucket is empty
                 ! * set soil moisture to zero
-                aet = aet + sm
+                aet = aet + sm !! Can lead to negative AET
+                if (aet.lt.0.0) then
+                        aet = 0.0
+                endif
                 ro = 0.0
                 sm = 0.0 ! xxx check in sofun
 
@@ -298,8 +365,20 @@ c******************************************************************************c
                 ro = 0.0
 
         endif
+
+        ! Calculate land surface runoff
+        if (kWm > 0) then
+                lsr1 = 0.5 * (pr + melt) * (sm / kWm)
+                lsr2 = (pr + melt + sm - kWm)
+                ! lsr2 = pr + melt + sm - kWm
+                lsr = max(lsr1,lsr2)
+        else
+                lsr = pr + melt
+        endif
+        lsr = lsr
         !write(*,*) 'sm:',sm
         !write(*,*) 'ro:',ro
+        !write(*,*) 'lsr:',lsr
 
         end ! subroutine run_one_day
 
@@ -363,10 +442,10 @@ c******************************************************************************c
         double precision hi, cos_hi         ! intersection hour angle, degrees
 
         !----------------------------------------------------------------
-        ! model parameters
+        ! model parameters --- needs cleaning up SB
         !----------------------------------------------------------------
         double precision kA,kalb_sw,kalb_vis,kb,kc,kCw,kd,kfFEC
-        double precision kG,kGsc,kL,kMa,kMv,kPo,kR,kTo,kWm,kw
+        double precision kG,kGsc,kL,kMa,kMv,kPo,kR,kTo,kw
         double precision pi  
         parameter(kA = 107)             ! constant for Rnl (Monteith & Unsworth, 1990)
         parameter(kalb_sw = 0.17)       ! shortwave albedo (Federer, 1968)
@@ -384,7 +463,6 @@ c******************************************************************************c
         parameter(kPo = 101325)         ! standard atmosphere, Pa (Allen, 1973)
         parameter(kR = 8.31447)         ! universal gas constant, J/mol/K (Moldover et al., 1988)
         parameter(kTo = 288.15)         ! base temperature, K (Berberan-Santos et al., 1997)
-        parameter(kWm = 150)            ! soil moisture capacity, mm (Cramer & Prentice, 1988)
         parameter(kw = 0.26)            ! entrainment factor (Lhomme, 1997; Priestley & Taylor, 1972)
         parameter(pi = 3.14159)
 
@@ -596,7 +674,8 @@ c******************************************************************************c
      *        rx*rw*rv*(sin(hn*pi/180) - 
      *        sin(hi*pi/180)) + 
      *        (rx*rw*ru - rx*rnl)*(hn - hi)*pi/180)
-        !write(*,*) "aet:",aet
+        !write(*,*) doy,aet,sw,hi,rx,rw,rv,rnl
+        !write(*,*) doy,aet,cos_hi,hi
 
         end ! End evap
 c******************************************************************************c

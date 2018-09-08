@@ -4,26 +4,32 @@ dyn.load('src/splash.so')
 
 ###############################################################################
 ## aetpet: Function to calculate aet and pet
-splashf <- function(dtemp,dprec,dsun,lat,yr,elv) {
+splashf <- function(dtemp,dprec,dsun,lat,yr,elv,whc) {
   dyn.load('src/splash.so')
-  retdata <- .Fortran("spin_up_sm",
-                      yr = as.integer(yr),
-                      lat = as.double(lat),
-                      elv = as.double(elv),
-                      pr = as.double(dprec),
-                      tc = as.double(dtemp),
-                      sf = as.double(dsun),
-                      maet = double(12),
-                      mpet = double(12),
-                      mcn = double(12),
-                      mro = double(12),
-                      msm = double(12),
-                      daet = double(365),
-                      dpet = double(365),
-                      dcn = double(365),
-                      dro = double(365),
-                      dsm = double(365),
-                      sm = double(1))
+  retdata = .Fortran('spin_up_sm',
+                    yr = as.integer(yr),
+                    lat = as.double(lat),
+                    elv = as.double(elv),
+                    whc = as.double(whc),
+                    pr = as.double(dprec),
+                    tc = as.double(dtemp),
+                    sf = as.double(dsun),
+                    maet = double(12),
+                    mpet = double(12),
+                    mcn = double(12),
+                    mro = double(12),
+                    mlsr = double(12),
+                    msm = double(12),
+                    msnow = double(12),
+                    daet = double(365),
+                    dpet = double(365),
+                    dcn = double(365),
+                    dro = double(365),
+                    dlsr = double(365),
+                    dsm = double(365),
+                    dsnow = double(365),
+                    sm = double(1))
+  
   return(retdata)
 }
 # 
@@ -69,39 +75,3 @@ daily <- function(mly) {
 # 
 
 ############################################################################
-# Matrix manipulation methods
-#
-# For simplicity we have avoided to create generic functions for 'flip' etc.
-# and therefore we have to call the corresponding methods coupled to the
-# 'matrix' class explicitly, i.e. flip.matrix().
-############################################################################
-# Flip matrix (upside-down)
-flip.matrix <- function(x) {
-  mirror.matrix(rotate180.matrix(x))
-}
-
-# Mirror matrix (left-right)
-mirror.matrix <- function(x) {
-  xx <- as.data.frame(x);
-  xx <- rev(xx);
-  xx <- as.matrix(xx);
-  xx;
-}
-
-# Rotate matrix 90 clockworks
-rotate90.matrix <- function(x) {
-  t(mirror.matrix(x))
-}
-
-# Rotate matrix 180 clockworks
-rotate180.matrix <- function(x) { 
-  xx <- rev(x);
-  dim(xx) <- dim(x);
-  xx;
-}
-
-# Rotate matrix 270 clockworks
-rotate270.matrix <- function(x) {
-  mirror.matrix(t(x))
-}
-
