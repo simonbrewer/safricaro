@@ -133,6 +133,7 @@ for (i in 1:12) {
   if (i == 1) {
     aet.r = setValues(r, out.df$aet[,i], layer=i)  
     pet.r = setValues(r, out.df$pet[,i], layer=i)  
+    sm.r = setValues(r, out.df$sm[,i], layer=i)  
     sw.r = setValues(r, out.df$sw[,i], layer=i)  
     cn.r = setValues(r, out.df$cn[,i], layer=i)  
     runoff.r = setValues(r, out.df$runoff[,i], layer=i)
@@ -141,6 +142,7 @@ for (i in 1:12) {
   } else {
     aet.r = stack(aet.r, setValues(r, out.df$aet[,i], layer=i))
     pet.r = stack(pet.r, setValues(r, out.df$pet[,i], layer=i))
+    sm.r = stack(sm.r, setValues(r, out.df$sm[,i], layer=i))
     sw.r = stack(sw.r, setValues(r, out.df$sw[,i], layer=i))
     cn.r = stack(cn.r, setValues(r, out.df$cn[,i], layer=i))
     runoff.r = stack(runoff.r, setValues(r, out.df$runoff[,i], layer=i))
@@ -157,8 +159,10 @@ writeRaster(aet.r, paste0(outdir,outname,"_aet.nc"), overwrite=TRUE,
             varname="aet",longname="Actual Evapotranspiration",varunit="mm m-1")
 writeRaster(pet.r, paste0(outdir,outname,"_pet.nc"), overwrite=TRUE,
             varname="pet",longname="Potential Evapotranspiration",varunit="mm m-1")
-writeRaster(sw.r, paste0(outdir,outname,"_sw.nc"), overwrite=TRUE,
+writeRaster(sm.r, paste0(outdir,outname,"_sm.nc"), overwrite=TRUE,
             varname="sw",longname="Soil Moisture",varunit="mm m-1")
+writeRaster(sw.r, paste0(outdir,outname,"_sw.nc"), overwrite=TRUE,
+            varname="sw",longname="Snow",varunit="mm m-1")
 writeRaster(cn.r, paste0(outdir,outname,"_cn.nc"), overwrite=TRUE,
             varname="cn",longname="Condensation",varunit="mm m-1")
 writeRaster(runoff.r, paste0(outdir,outname,"_runoff.nc"), overwrite=TRUE,
