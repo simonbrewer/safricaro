@@ -31,6 +31,7 @@ clim_tmp = stack(paste(climdir,tmpfile,sep=''))
 clim_pre = stack(paste(climdir,prefile,sep=''))
 clim_cld = stack(paste(climdir,cldfile,sep=''))
 clim_elv = raster(paste(climdir,elvfile,sep=''), varname='elv')
+clim_elv = clim_elv*1000 ## km -> m
 
 stn_grd = raster(stnfile)
 r3 = raster(rofile)
