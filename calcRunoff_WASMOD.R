@@ -93,11 +93,7 @@ for (i in 1:ncrds) {
     whc = 150
     
     if (whc > 0) {
-      dtemp = daily(tmp_mat[i,])$dly
-      dprec = daily(pre_mat[i,])$dly/(365/12)
-      # dsun = (100-daily(cld_mat[i,])$dly)/100
-      dsun = daily(cld_mat[i,])$dly/100
-      
+
       dtemp0 = dtemp-5
       out.df$gdd5[i] = sum(ifelse(dtemp0>0, dtemp0, 0))
       out.df$tmp[i,] = tmp_mat[i,]
@@ -109,6 +105,7 @@ for (i in 1:ncrds) {
       tmean = out.df$tmp[i,]
       prec = out.df$pre[i,]
       pet = out.df$ep[i,]
+      
       ## Temporary vectors
       sp.cur = 5
       lm.cur = 150

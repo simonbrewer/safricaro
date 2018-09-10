@@ -14,4 +14,4 @@ writeRaster(pet.obs, "./Data/pet.obs.mon.nc", overwrite=TRUE)
 
 pet.obs.ann = sum(pet.obs)
 plot(pet.obs.ann)
-writeRaster(pet.obs, "./Data/pet.obs.ann.nc", overwrite=TRUE)
+writeRaster(pet.obs.ann, "./Data/pet.obs.ann.nc", overwrite=TRUE)
