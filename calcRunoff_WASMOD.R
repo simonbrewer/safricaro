@@ -84,7 +84,6 @@ out.df = list(gdd5 = rep(NA,ncrds),
 for (i in 1:ncrds) {
   if (i%%100 == 0) {print(paste("Doing:",i,"of",ncrds))}
   
-  ## First calculate the evaporation (needs relative humidity)
   elv = elv_mat[i]
   # if (!is.na(tmp_mat[i,1]) & !is.na(pre_mat[i,1]) &
   #     !is.na(cld_mat[i,1]) & (elv > -500)){
@@ -103,7 +102,7 @@ for (i in 1:ncrds) {
       out.df$gdd5[i] = sum(ifelse(dtemp0>0, dtemp0, 0))
       out.df$tmp[i,] = tmp_mat[i,]
       out.df$pre[i,] = pre_mat[i,]
-      out.df$ep[i,] = ec * ifelse(tmp_mat[i,]>0, tmp_mat[i,], 0) * (100 - reh_mat[i,])
+      out.df$ep[i,] = ec * ifelse(tmp_mat[i,]>0, tmp_mat[i,]^2, 0) * (100 - reh_mat[i,])
 
       ###############################################################################
       ## Uses original vectors - can be cleaned
